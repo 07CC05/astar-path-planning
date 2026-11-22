@@ -186,9 +186,9 @@
   </div>
 
   <!-- 四算法对比 -->
-  <div class="section-title"><span class="bar"></span>二、四算法横向对比<span class="hint">同一地图、同一起终点 · 对应“自选题纪律③：参照系”</span></div>
+  <div class="section-title"><span class="bar"></span>二、四算法横向对比<span class="hint">同一地图、同一起终点</span></div>
   <div class="card">
-    <p class="note" style="margin-top:0">在等权 4 邻接网格中，BFS / Dijkstra / A*（可采纳启发）都应得到<strong>同一条最短路径</strong>；差异体现在<strong>扩展节点数</strong>——这正是数据结构课要讲的核心：优先队列让 A* 少走多少弯路。贪心与加权 A* 不保证最优，用于对照。</p>
+    <p class="note" style="margin-top:0">在等权 4 邻接网格中，BFS / Dijkstra / A*（可采纳启发）都应得到<strong>同一条最短路径</strong>；差异体现在<strong>扩展节点数</strong>，这也是数据结构课要讲的核心：优先队列能让 A* 少走多少弯路。贪心与加权 A* 不保证最优，用于对照。</p>
     <table id="cmpTable">
       <thead><tr><th>算法</th><th>启发函数</th><th>是否找到</th><th>路径步数</th><th>扩展节点数</th><th>耗时 (ms)</th><th>最优性</th></tr></thead>
       <tbody><tr><td colspan="7" style="color:var(--sub);text-align:center;padding:22px">点击下方按钮运行对比实验</td></tr></tbody>
@@ -197,7 +197,7 @@
   </div>
 
   <!-- 知识点映射 -->
-  <div class="section-title"><span class="bar"></span>三、知识点映射表<span class="hint">对应“自选题纪律①”：证明这是一份数据结构作业，而非游戏</span></div>
+  <div class="section-title"><span class="bar"></span>三、知识点映射表<span class="hint">六个知识点，逐条对应到源码</span></div>
   <div class="card">
     <table>
       <thead><tr><th style="width:24%">课程知识点</th><th style="width:34%">项目中的对应模块</th><th>代码位置 / 说明</th></tr></thead>
@@ -237,7 +237,7 @@
       <div class="section-title" style="margin:0 0 10px"><span class="bar"></span>五、实验结论</div>
       <ul style="font-size:13.5px;margin-top:0">
         <li><b>正确性</b>：在 60 组随机地图上，A*/Dijkstra/BFS 三者路径步数完全一致，验证了可采纳启发下 A* 的最优性；路径四邻接连通且不穿墙。</li>
-        <li><b>效率</b>：同一地图 A* 的扩展节点数始终不超过 Dijkstra——曼哈顿启发把搜索“拉向”终点，减少无效扩展。</li>
+        <li><b>效率</b>：同一地图上 A* 的扩展节点数始终不超过 Dijkstra，曼哈顿启发把搜索往终点方向拉，少扩展很多无关节点。</li>
         <li><b>权衡</b>：加权 A* 扩展更少但路径可能变长，印证“启发函数越强、越快但越可能次优”。</li>
         <li><b>工程</b>：自制二叉堆相比线性扫描，在大规模网格上取最小值的收益随顶点数增长而放大（第二节可实测）。</li>
       </ul>
