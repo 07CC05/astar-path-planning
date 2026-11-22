@@ -1,0 +1,15 @@
+# 编译产物
+*.exe
+*.o
+*.obj
+build/
+
+# 课程提交物与报告（含姓名、学号等个人信息，不入公开仓库）
+submit/
+数据结构课程设计报告-A星路径规划.docx
+
+# 编辑器 / 系统
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

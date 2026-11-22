@@ -1,0 +1,45 @@
+=== 四算法对比（迷宫 41x27 seed=42）===
+terrain=maze  41x27  seed=42  (同一地图、同一起终点)
+
+Algorithm   Heuristic   Found    Steps   Expanded  ms        Optimal
+------------------------------------------------------------------------
+A*          manhattan   yes      62      116       0.020     YES
+Dijkstra    none        yes      62      438       0.024     YES
+BFS         none        yes      62      430       0.019     YES
+Greedy      manhattan   yes      62      187       0.019     YES
+
+=== 四算法对比（随机 31x21 seed=7）===
+terrain=random  31x21  seed=7  (同一地图、同一起终点)
+
+Algorithm   Heuristic   Found    Steps   Expanded  ms        Optimal
+------------------------------------------------------------------------
+A*          manhattan   yes      46      62        0.014     YES
+Dijkstra    none        yes      46      466       0.029     YES
+BFS         none        yes      46      467       0.018     YES
+Greedy      manhattan   yes      50      54        0.011     no
+
+=== 二叉堆 vs 线性扫描规模实验 ===
+
+Open-list 规模实验：二叉堆 vs 线性扫描
+（open 地形，稀疏障碍，A*+曼哈顿）
+
+Grid      Heap(ms)      Linear(ms)      Ratio
+    --------------------------------------------------
+64x64     0.069         0.069           1.00x
+128x128   0.150         0.177           1.18x
+256x256   0.587         2.162           3.68x
+512x512   1.879         12.209          6.49x
+
+=== 动态障碍重规划 ===
+
+动态障碍重规划演示（在路径中段 (28,5) 附近新增 4 格路障）
+
+重规划前: steps=62  expanded=77
+重规划后: steps=62  expanded=75  (扩展变化 -2)
+说明：完整重规划清空 cameFrom/closed 后从起点重搜；
+      启发仍可采纳则结果依旧最优。扩展数可能增减，
+      若要复用旧信息需增量式 LPA*/D* Lite（超范围）。
+
+=== 正确性测试 ===
+
+通过: 1066  失败: 0
