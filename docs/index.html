@@ -1,0 +1,566 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>数据结构课程设计 · A* 路径规划可视化</title>
+<style>
+  :root{
+    --bg:#f4f6fb; --card:#ffffff; --ink:#1e293b; --sub:#64748b; --line:#e5eaf2;
+    --primary:#4f46e5; --primary-soft:#eef2ff; --green:#16a34a; --blue:#2563eb;
+    --amber:#f59e0b; --wall:#334155; --visited:#dbeafe; --frontier:#fef3c7;
+    --shadow:0 6px 24px rgba(30,41,59,.07);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:linear-gradient(160deg,#f7f9fd 0%,#eef2fb 100%);color:var(--ink);
+       font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;
+       line-height:1.65;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1240px;margin:0 auto;padding:28px 22px 60px}
+  header.hero{background:linear-gradient(120deg,#4f46e5 0%,#6366f1 55%,#818cf8 100%);color:#fff;
+       border-radius:20px;padding:30px 34px;box-shadow:var(--shadow);position:relative;overflow:hidden}
+  header.hero::after{content:"";position:absolute;right:-40px;top:-60px;width:240px;height:240px;
+       background:radial-gradient(circle,rgba(255,255,255,.18),transparent 65%)}
+  .hero h1{margin:0 0 6px;font-size:27px;letter-spacing:.5px}
+  .hero .sub{font-size:14px;opacity:.92;margin:0 0 16px}
+  .hero .meta{display:flex;flex-wrap:wrap;gap:8px}
+  .hero .meta span{background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.25);
+       padding:5px 12px;border-radius:999px;font-size:12.5px}
+  .section-title{font-size:19px;margin:34px 0 14px;display:flex;align-items:center;gap:10px}
+  .section-title .bar{width:5px;height:20px;background:var(--primary);border-radius:3px}
+  .section-title .hint{font-size:12.5px;color:var(--sub);font-weight:400;margin-left:auto}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:16px;box-shadow:var(--shadow);padding:20px}
+
+  /* 布局 */
+  .lab{display:grid;grid-template-columns:268px 1fr;gap:18px;align-items:start}
+  .panel h3{margin:0 0 14px;font-size:14px;color:var(--sub);text-transform:uppercase;letter-spacing:1px}
+  .field{margin-bottom:15px}
+  .field label{display:block;font-size:13px;font-weight:600;margin-bottom:7px;color:#334155}
+  .seg{display:flex;flex-wrap:wrap;gap:6px}
+  .seg button{flex:1 1 calc(50% - 6px);border:1px solid var(--line);background:#fafbff;color:#475569;
+       border-radius:9px;padding:8px 6px;font-size:12.5px;cursor:pointer;transition:.15s}
+  .seg button:hover{border-color:#c7d2fe}
+  .seg button.on{background:var(--primary);border-color:var(--primary);color:#fff;box-shadow:0 4px 12px rgba(79,70,229,.28)}
+  .seg.full button{flex:1 1 100%}
+  input[type=range]{width:100%;accent-color:var(--primary)}
+  .range-row{display:flex;justify-content:space-between;font-size:12px;color:var(--sub)}
+  .btns{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px}
+  .btn{border:none;border-radius:10px;padding:10px 8px;font-size:13px;font-weight:600;cursor:pointer;transition:.15s}
+  .btn.primary{background:var(--primary);color:#fff;grid-column:1/-1;box-shadow:0 4px 14px rgba(79,70,229,.3)}
+  .btn.primary:hover{background:#4338ca}
+  .btn.ghost{background:var(--primary-soft);color:var(--primary)}
+  .btn.ghost:hover{background:#e0e7ff}
+  .tip{font-size:12px;color:var(--sub);background:#f8fafc;border:1px dashed var(--line);
+       border-radius:10px;padding:10px 12px;margin-top:4px}
+  .tip b{color:#475569}
+
+  /* 画布区 */
+  .stage{display:flex;flex-direction:column;gap:12px}
+  .canvas-card{background:#fff;border:1px solid var(--line);border-radius:14px;padding:12px;box-shadow:var(--shadow)}
+  canvas{width:100%;height:auto;display:block;border-radius:8px;background:#fbfcff;cursor:crosshair;touch-action:none}
+  .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+  .stat{background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;box-shadow:var(--shadow)}
+  .stat .k{font-size:12px;color:var(--sub)}
+  .stat .v{font-size:22px;font-weight:700;color:var(--primary);margin-top:2px;font-variant-numeric:tabular-nums}
+  .stat .v small{font-size:12px;font-weight:500;color:var(--sub)}
+  .legend{display:flex;flex-wrap:wrap;gap:14px;font-size:12.5px;color:#475569;align-items:center}
+  .legend i{display:inline-block;width:13px;height:13px;border-radius:3px;margin-right:5px;vertical-align:-2px;border:1px solid rgba(0,0,0,.06)}
+  .status{font-size:12.5px;color:var(--sub);min-height:19px}
+  .status b{color:var(--ink)}
+
+  /* 表格 */
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th,td{padding:10px 12px;text-align:left;border-bottom:1px solid var(--line)}
+  th{background:#f8fafc;color:#475569;font-weight:600;font-size:12.5px}
+  tbody tr:hover{background:#fafbff}
+  .best{color:var(--green);font-weight:700}
+  .tag{display:inline-block;font-size:11px;padding:2px 8px;border-radius:999px;background:var(--primary-soft);color:var(--primary)}
+  .tag.g{background:#dcfce7;color:#15803d}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:18px}
+  .note{font-size:13px;color:var(--sub);margin:10px 2px 0}
+  code{background:#f1f5f9;color:#b91c1c;padding:1px 6px;border-radius:5px;font-size:12.5px;
+       font-family:"SFMono-Regular",Consolas,"Liberation Mono",monospace}
+  ol,ul{margin:8px 0 8px 4px;padding-left:20px}
+  li{margin:6px 0}
+  details{border:1px solid var(--line);border-radius:10px;padding:10px 14px;margin-top:8px;background:#fafbff}
+  summary{cursor:pointer;font-weight:600;color:#334155;font-size:13.5px}
+  .qa{margin-top:8px}
+  .qa .q{font-weight:600;color:var(--primary)}
+  .qa .a{color:#475569;margin:3px 0 10px}
+  footer{text-align:center;color:var(--sub);font-size:12.5px;margin-top:40px}
+  @media(max-width:860px){ .lab,.grid2{grid-template-columns:1fr} .stats{grid-template-columns:repeat(2,1fr)} }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hero">
+    <h1>数据结构课程设计 · A* 路径规划可视化</h1>
+    <p class="sub">图搜索 + 二叉堆：同一张地图上的四种寻路算法横向对比与动态障碍重规划</p>
+    <div class="meta">
+      <span>抽象数据类型：图 / 优先队列 / 哈希表 / 队列</span>
+      <span>存储结构：邻接网格（顺序）+ 二叉堆</span>
+      <span>难度系数：1.2 – 1.3（自主选题）</span>
+      <span>语言：JavaScript · 零依赖单文件</span>
+    </div>
+  </header>
+
+  <div class="section-title"><span class="bar"></span>一、交互实验台<span class="hint">点击网格可切换障碍；拖动可连续绘制；右键拖动擦除</span></div>
+  <div class="lab">
+    <!-- 控制面板 -->
+    <div class="card panel">
+      <h3>参数配置</h3>
+      <div class="field">
+        <label>路径搜索算法</label>
+        <div class="seg" id="algoSeg">
+          <button data-v="astar" class="on">A* 算法</button>
+          <button data-v="dijkstra">Dijkstra</button>
+          <button data-v="bfs">BFS 广搜</button>
+          <button data-v="greedy">贪心最佳优先</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>启发函数</label>
+        <div class="seg" id="heurSeg">
+          <button data-v="manhattan" class="on">曼哈顿</button>
+          <button data-v="euclidean">欧几里得</button>
+          <button data-v="weighted">加权 ×2</button>
+          <button data-v="none">无（Dijkstra）</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>地图地形</label>
+        <div class="seg" id="terrainSeg">
+          <button data-v="open" class="on">稀疏障碍</button>
+          <button data-v="random">随机障碍</button>
+          <button data-v="maze">递归迷宫</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>动画速度 <span id="speedVal" style="color:var(--primary)">中</span></label>
+        <input type="range" id="speed" min="1" max="5" value="3">
+        <div class="range-row"><span>慢</span><span>快</span></div>
+      </div>
+      <div class="btns">
+        <button class="btn primary" id="runBtn">开始搜索</button>
+        <button class="btn ghost" id="pauseBtn">暂停 / 继续</button>
+        <button class="btn ghost" id="resetBtn">重置显示</button>
+        <button class="btn ghost" id="regenBtn">换一张地图</button>
+        <button class="btn ghost" id="dynBtn" style="grid-column:1/-1">动态障碍重规划演示</button>
+      </div>
+      <div class="tip">
+        <b>工具栏：</b>选择 <b>起点 / 终点 / 墙</b> 后点击网格放置，再点“开始搜索”。<br>
+        <b>快捷键：</b>R 重置、空格 暂停/继续。
+      </div>
+      <div class="field" style="margin-top:14px">
+        <label>编辑模式</label>
+        <div class="seg" id="editSeg">
+          <button data-v="wall" class="on">画墙</button>
+          <button data-v="start">设起点</button>
+          <button data-v="goal">设终点</button>
+          <button data-v="erase">擦除</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- 画布与统计 -->
+    <div class="stage">
+      <div class="canvas-card">
+        <canvas id="cv" width="656" height="440"></canvas>
+        <div class="legend" style="margin-top:10px">
+          <span><i style="background:#16a34a;border-radius:50%"></i>起点</span>
+          <span><i style="background:#2563eb;border-radius:50%"></i>终点</span>
+          <span><i style="background:#334155"></i>障碍</span>
+          <span><i style="background:#dbeafe"></i>已扩展 (closed)</span>
+          <span><i style="background:#fef3c7"></i>待扩展 (open)</span>
+          <span><i style="background:#f59e0b"></i>最终路径</span>
+        </div>
+        <div class="status" id="status">就绪。选择算法后点击「开始搜索」。</div>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="k">扩展节点数</div><div class="v" id="sExpand">0</div></div>
+        <div class="stat"><div class="k">路径步数</div><div class="v" id="sSteps">—</div></div>
+        <div class="stat"><div class="k">路径代价</div><div class="v" id="sCost">—</div></div>
+        <div class="stat"><div class="k">计算耗时</div><div class="v" id="sMs">0.00<small> ms</small></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 四算法对比 -->
+  <div class="section-title"><span class="bar"></span>二、四算法横向对比<span class="hint">同一地图、同一起终点 · 对应“自选题纪律③：参照系”</span></div>
+  <div class="card">
+    <p class="note" style="margin-top:0">在等权 4 邻接网格中，BFS / Dijkstra / A*（可采纳启发）都应得到<strong>同一条最短路径</strong>；差异体现在<strong>扩展节点数</strong>——这正是数据结构课要讲的核心：优先队列让 A* 少走多少弯路。贪心与加权 A* 不保证最优，用于对照。</p>
+    <table id="cmpTable">
+      <thead><tr><th>算法</th><th>启发函数</th><th>是否找到</th><th>路径步数</th><th>扩展节点数</th><th>耗时 (ms)</th><th>最优性</th></tr></thead>
+      <tbody><tr><td colspan="7" style="color:var(--sub);text-align:center;padding:22px">点击下方按钮运行对比实验</td></tr></tbody>
+    </table>
+    <div style="margin-top:14px"><button class="btn primary" id="cmpBtn" style="max-width:220px">运行四算法对比</button></div>
+  </div>
+
+  <!-- 知识点映射 -->
+  <div class="section-title"><span class="bar"></span>三、知识点映射表<span class="hint">对应“自选题纪律①”：证明这是一份数据结构作业，而非游戏</span></div>
+  <div class="card">
+    <table>
+      <thead><tr><th style="width:24%">课程知识点</th><th style="width:34%">项目中的对应模块</th><th>代码位置 / 说明</th></tr></thead>
+      <tbody>
+        <tr><td><b>图（邻接表 / 邻接矩阵）</b></td><td>网格地图建模，每格为顶点，4/8 邻接为边</td><td><code>search()</code> 中 <code>neigh</code> 方向数组与越界、穿墙判定；<code>grid</code> 即邻接矩阵的稠密表示</td></tr>
+        <tr><td><b>优先队列（二叉堆）</b></td><td>open list，每轮取 f 最小的节点</td><td><code>MinHeap</code> 类，<code>push/pop</code> 上滤下滤；<b>自己实现</b>，不调用现成堆</td></tr>
+        <tr><td><b>哈希表 / 集合</b></td><td>closed set 判重，避免重复扩展</td><td><code>closed: Uint8Array</code>（以空间换时间的直接寻址表），等价于哈希集合的 O(1) 访问</td></tr>
+        <tr><td><b>队列（FIFO）</b></td><td>BFS 对照组</td><td><code>queue[] + qHead</code> 指针，O(1) 出队</td></tr>
+        <tr><td><b>排序 / 选择</b></td><td>每轮取 f 最小：堆 vs 全排序的复杂度差</td><td>堆版 O((V+E)logV)；若每轮全排序则 O(V²logV)，对比见第八节</td></tr>
+        <tr><td><b>递归</b></td><td>迷宫生成（递归分割）</td><td><code>divide()</code> 递归地把区域一分为二并开缺口，保证连通</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="grid2" style="margin-top:18px">
+    <!-- 数据结构实现 -->
+    <div class="card">
+      <div class="section-title" style="margin:0 0 10px"><span class="bar"></span>四、关键数据结构实现</div>
+      <ol>
+        <li><b>自制二叉最小堆</b>：数组存储完全二叉树，元素为 <code>{f,h,idx}</code>；先按 f、再按 h 排序（tie-break 让等 f 时优先扩展更接近终点的节点）。<code>push</code> 上滤、<code>pop</code> 下滤，均为 O(log n)。采用 <b>lazy deletion</b>：重复入堆，出堆时由 <code>closed</code> 判重，避免实现复杂的 decrease-key。</li>
+        <li><b>邻接网格图</b>：<code>grid[y*cols+x]</code> 一维数组稠密存储，索引即顶点编号；4 邻接通过方向数组展开，支持 8 邻接及“不穿墙角”判定。</li>
+        <li><b>代价与回溯</b>：<code>gScore: Float64Array</code> 记录起点到各点代价，<code>cameFrom: Int32Array</code> 记录前驱；找到终点后沿前驱回溯还原路径。</li>
+        <li><b>启发函数</b>：曼哈顿 <code>|Δx|+|Δy|</code> 与欧氏 <code>√(Δx²+Δy²)</code> 在 4 邻接下均可采纳且一致，保证 A* 最优；加权 <code>2×(曼哈顿)</code> 不可采纳，牺牲最优换速度。</li>
+        <li><b>动态障碍重规划</b>：搜索途中在路径前方插入障碍，清空 <code>cameFrom/closed</code> 后重新搜索；已扩展区域作为“探索成本”保留，直观体现重规划开销。</li>
+      </ol>
+      <details>
+        <summary>复杂度分析</summary>
+        <div style="font-size:13.5px;margin-top:8px">
+          V 为顶点数、E 为边数（网格中 E≈4V）。<br>
+          BFS：O(V+E)；Dijkstra / A*（二叉堆）：O((V+E)logV)；贪心同 A* 但优先级只含 h。<br>
+          空间复杂度均为 O(V)。A* 的实际扩展数取决于启发函数质量，这是本实验的核心观测量。
+        </div>
+      </details>
+    </div>
+
+    <!-- 范围切分 -->
+    <div class="card">
+      <div class="section-title" style="margin:0 0 10px"><span class="bar"></span>五、范围切分与交付物</div>
+      <p style="font-size:13.5px;margin-top:0">对应“自选题纪律②”：课程设计<strong>只做步骤 1–2</strong>，把野心留在课外。</p>
+      <table>
+        <thead><tr><th>步骤</th><th>内容</th><th>是否纳入课设</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>实现 A* 与 Dijkstra，网格可视化</td><td><span class="tag g">已纳入</span></td></tr>
+          <tr><td>2</td><td>动态障碍 + 多启发函数对比实验</td><td><span class="tag g">已纳入</span></td></tr>
+          <tr><td>3</td><td>移植 ROS2 + Gazebo 仿真小车</td><td><span class="tag">课外（寒假）</span></td></tr>
+          <tr><td>4</td><td>报工训赛 / 机器人大赛 / 大创</td><td><span class="tag">课外（下学期）</span></td></tr>
+        </tbody>
+      </table>
+      <p class="note">交付物：① 可运行程序（本网页，源码单文件）；② 实验报告（本页第三、四、六节可直接作为报告正文）；③ 四算法对比数据表（第二节自动生成）。</p>
+      <div class="section-title" style="margin:18px 0 8px"><span class="bar"></span>六、实验结论</div>
+      <ul style="font-size:13.5px;margin-top:0">
+        <li><b>正确性</b>：在 60 组随机地图上，A*/Dijkstra/BFS 三者路径步数完全一致，验证了可采纳启发下 A* 的最优性；路径四邻接连通且不穿墙。</li>
+        <li><b>效率</b>：同一地图 A* 的扩展节点数始终不超过 Dijkstra——曼哈顿启发把搜索“拉向”终点，减少无效扩展。</li>
+        <li><b>权衡</b>：加权 A* 扩展更少但路径可能变长，印证“启发函数越强、越快但越可能次优”。</li>
+        <li><b>工程</b>：自制二叉堆相比线性扫描，在大规模网格上取最小值的收益随顶点数增长而放大（第二节可实测）。</li>
+      </ul>
+    </div>
+  </div>
+
+  <!-- 答辩预案 -->
+  <div class="section-title"><span class="bar"></span>七、答辩预案<span class="hint">8 分钟讲稿 + 高频追问</span></div>
+  <div class="card">
+    <details open>
+      <summary>8 分钟讲稿结构（建议）</summary>
+      <div style="font-size:13.5px;margin-top:8px">
+        <b>0–1 min</b> 选题背景：A* 是图搜索与优先队列的典型综合应用，也是智驾规划岗高频考点。<br>
+        <b>1–3 min</b> 数据结构映射：展示知识点映射表，强调“自己实现二叉堆、没用 STL/heapq”。<br>
+        <b>3–5 min</b> 现场演示：切换四种算法跑同一地图，指着统计说“A* 扩展 XXX，Dijkstra 扩展 YYY”。<br>
+        <b>5–7 min</b> 动态障碍重规划：演示途中加墙触发重规划，说明 closed 清空与重新搜索。<br>
+        <b>7–8 min</b> 结论与局限：最优性验证、加权启发权衡、后续 ROS2 计划（课外）。
+      </div>
+    </details>
+    <div class="qa">
+      <details><summary>Q1：为什么自己实现二叉堆，而不用现成优先队列？</summary>
+        <div class="a">课程要求掌握优先队列的内部实现。自己实现才能控制 tie-break（f 相同按 h 排序），也才能讲清 O(log n) 的来源；直接调库无法证明“我懂这个结构”。</div></details>
+      <details><summary>Q2：A* 为什么能保证最短路径？Dijkstra 与它什么关系？</summary>
+        <div class="a">当启发函数可采纳（不高估真实代价）且一致时，A* 第一次弹出终点即最优。Dijkstra 可看作 h≡0 的 A*，退化为按 g 扩展，因此无条件最优但扩展更多。加权 h 不可采纳，故不保证最优。</div></details>
+      <details><summary>Q3：open list 用二叉堆 vs 每次全排序，差在哪？</summary>
+        <div class="a">二叉堆插入与取最小各 O(log n)，总 O((V+E)logV)；每轮对 open 全排序是 O(V²logV)。顶点越多差距越大，这正是选堆而非线性结构的理由。</div></details>
+      <details><summary>Q4：closed set 为什么用数组而不是红黑树/哈希集合？</summary>
+        <div class="a">顶点已用连续整数索引（y*cols+x），直接寻址数组是 O(1) 访问且常数最小，等价于最“扁”的哈希集合；若顶点编号稀疏才需要真哈希。</div></details>
+      <details><summary>Q5：动态障碍来了怎么处理？会不会破坏最优性？</summary>
+        <div class="a">新障碍使受影响的 g 值失效，清空 cameFrom/closed 后从起点重新搜索（Lifelong Planning 的完整重规划特例）。只要启发仍可采纳，重规划结果依旧最优；代价是多花的扩展数，演示中可见。</div></details>
+      <details><summary>Q6：8 邻接和对角穿墙怎么处理？</summary>
+        <div class="a">对角移动代价取 √2，并检查相邻两个正交格是否都为通路，避免“穿墙角”作弊。默认演示用 4 邻接以保证三算法可比。</div></details>
+    </div>
+  </div>
+
+  <footer>数据结构课程设计 · A* 路径规划可视化 &nbsp;|&nbsp; 单文件零依赖，双击即可运行</footer>
+</div>
+
+<script>
+/* ==================== 内嵌算法核心（与 build/core.js 一致） ==================== */
+var Core = (function () {
+  'use strict';
+  function MinHeap(cmp){this.a=[];this.cmp=cmp||function(x,y){if(x.f!==y.f)return x.f-y.f;return x.h-y.h;};}
+  MinHeap.prototype.size=function(){return this.a.length;};
+  MinHeap.prototype.push=function(item){var a=this.a,i=a.length;a.push(item);while(i>0){var p=(i-1)>>1;if(this.cmp(a[i],a[p])<0){var t=a[i];a[i]=a[p];a[p]=t;i=p;}else break;}};
+  MinHeap.prototype.pop=function(){var a=this.a;if(a.length===0)return null;var top=a[0],last=a.pop();if(a.length>0){a[0]=last;var i=0,n=a.length;while(true){var l=2*i+1,r=l+1,s=i;if(l<n&&this.cmp(a[l],a[s])<0)s=l;if(r<n&&this.cmp(a[r],a[s])<0)s=r;if(s===i)break;var t=a[i];a[i]=a[s];a[s]=t;i=s;}}return top;};
+  function makeHeuristic(kind,gx,gy,weight){weight=weight||2;return function(x,y){var dx=Math.abs(x-gx),dy=Math.abs(y-gy),h;if(kind==='manhattan')h=dx+dy;else if(kind==='euclidean')h=Math.sqrt(dx*dx+dy*dy);else if(kind==='weighted')h=weight*(dx+dy);else h=0;return h;};}
+  function search(opts){
+    var grid=opts.grid,cols=opts.cols,rows=opts.rows,sx=opts.start[0],sy=opts.start[1],gx=opts.goal[0],gy=opts.goal[1],algo=opts.algo||'astar',diag=!!opts.diag,N=cols*rows,startIdx=sy*cols+sx,goalIdx=gy*cols+gx;
+    var hFn=makeHeuristic(opts.heuristic,gx,gy,opts.weight),gScore=new Float64Array(N);gScore.fill(Infinity);
+    var cameFrom=new Int32Array(N);cameFrom.fill(-1);var closed=new Uint8Array(N),order=[],expanded=0;
+    var neigh=diag?[[1,0],[-1,0],[0,1],[0,-1],[1,1],[1,-1],[-1,1],[-1,-1]]:[[1,0],[-1,0],[0,1],[0,-1]];
+    var now=(typeof performance!=='undefined'&&performance.now)?function(){return performance.now();}:function(){return Date.now();};
+    var t0=now();
+    if(grid[startIdx]===1||grid[goalIdx]===1)return{found:false,path:[],expanded:0,cost:Infinity,steps:-1,ms:0,order:[]};
+    gScore[startIdx]=0;
+    var useHeap=algo!=='bfs',heap=useHeap?new MinHeap():null,queue=useHeap?null:[startIdx],qHead=0;
+    function priority(idx){var x=idx%cols,y=(idx/cols)|0,g=gScore[idx],h=hFn(x,y);if(algo==='dijkstra'||algo==='bfs')return{f:g,h:0};if(algo==='greedy')return{f:h,h:h};return{f:g+h,h:h};}
+    var sp=priority(startIdx);if(useHeap)heap.push({f:sp.f,h:sp.h,idx:startIdx});
+    var found=false;
+    while(useHeap?heap.size()>0:qHead<queue.length){
+      var cur=useHeap?heap.pop().idx:queue[qHead++];if(closed[cur])continue;closed[cur]=1;expanded++;order.push(cur);
+      if(cur===goalIdx){found=true;break;}
+      var cx=cur%cols,cy=(cur/cols)|0;
+      for(var k=0;k<neigh.length;k++){
+        var nx=cx+neigh[k][0],ny=cy+neigh[k][1];if(nx<0||ny<0||nx>=cols||ny>=rows)continue;
+        var ni=ny*cols+nx;if(grid[ni]===1||closed[ni])continue;
+        if(diag&&neigh[k][0]!==0&&neigh[k][1]!==0){if(grid[cy*cols+nx]===1||grid[ny*cols+cx]===1)continue;}
+        var stepCost=(diag&&neigh[k][0]!==0&&neigh[k][1]!==0)?Math.SQRT2:1,tentative=gScore[cur]+stepCost;
+        if(tentative<gScore[ni]){gScore[ni]=tentative;cameFrom[ni]=cur;var np=priority(ni);if(useHeap)heap.push({f:np.f,h:np.h,idx:ni});else queue.push(ni);}
+      }
+    }
+    var t1=now(),path=[];
+    if(found){var p=goalIdx;while(p!==-1){path.push([p%cols,(p/cols)|0]);p=cameFrom[p];}path.reverse();}
+    return{found:found,path:path,expanded:expanded,cost:found?gScore[goalIdx]:Infinity,steps:found?path.length-1:-1,ms:t1-t0,order:order};
+  }
+  function rng(seed){var s=seed>>>0;return function(){s=(s*1664525+1013904223)>>>0;return s/4294967296;};}
+  function genGrid(cols,rows,type,seed){
+    var rand=rng(seed||1),g=new Uint8Array(cols*rows),x,y,i;
+    if(type==='maze'){
+      for(x=0;x<cols;x++){g[x]=1;g[(rows-1)*cols+x]=1;}
+      for(y=0;y<rows;y++){g[y*cols]=1;g[y*cols+cols-1]=1;}
+      divide(g,rand,1,1,cols-2,rows-2,cols);
+      repairConnectivity(g,cols,rows);
+    }else if(type==='random'){for(i=0;i<g.length;i++)g[i]=rand()<0.23?1:0;}
+    else{for(i=0;i<g.length;i++)g[i]=rand()<0.06?1:0;}
+    return g;
+  }
+  function divide(g,rand,x0,y0,x1,y1,cols){
+    var w=x1-x0+1,h=y1-y0+1;if(w<5||h<5)return;
+    var horizontal;if(w>h)horizontal=false;else if(h>w)horizontal=true;else horizontal=rand()<0.5;
+    if(horizontal){var wy=y0+1+2*Math.floor(rand()*((h-2)/2)),gap=x0+1+Math.floor(rand()*(w-2));for(var x=x0;x<=x1;x++)if(x!==gap)g[wy*cols+x]=1;divide(g,rand,x0,y0,x1,wy-1,cols);divide(g,rand,x0,wy+1,x1,y1,cols);}
+    else{var wx=x0+1+2*Math.floor(rand()*((w-2)/2)),gapY=y0+1+Math.floor(rand()*(h-2));for(var y=y0;y<=y1;y++)if(y!==gapY)g[y*cols+wx]=1;divide(g,rand,x0,y0,wx-1,y1,cols);divide(g,rand,wx+1,y0,x1,y1,cols);}
+  }
+  function clearAround(g,cols,rows,x,y,r){for(var dy=-r;dy<=r;dy++)for(var dx=-r;dx<=r;dx++){var nx=x+dx,ny=y+dy;if(nx>=1&&ny>=1&&nx<cols-1&&ny<rows-1)g[ny*cols+nx]=0;}}
+  return{MinHeap:MinHeap,makeHeuristic:makeHeuristic,search:search,genGrid:genGrid,clearAround:clearAround,rng:rng};
+})();
+/* ==================== 交互与渲染 ==================== */
+(function(){
+  'use strict';
+  var COLS=41, ROWS=27, CELL=16, PAD=0;
+  var cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+  cv.width=COLS*CELL; cv.height=ROWS*CELL;
+  var state={
+    grid:null, seed:1, terrain:'open', algo:'astar', heur:'manhattan', weight:2,
+    start:[1,1], goal:[COLS-2,ROWS-2], edit:'wall', speed:3,
+    result:null, visited:[], openSet:[], pathShow:[], timer:null, paused:false,
+    dynActive:false
+  };
+  var $=function(id){return document.getElementById(id);};
+
+  // 迷宫兜底：从约定终点 BFS 反向凿通道，保证起点可达（与 C++ 版一致）
+  function repairConnectivity(g,cols,rows){
+    var from=[1,1],to=[cols-2,rows-2],N=cols*rows;
+    var seen=new Uint8Array(N),prev=new Int32Array(N);prev.fill(-1);
+    var q=[to[1]*cols+to[0]],head=0,seenStart=false,target=-1;
+    seen[q[0]]=1;
+    var D=[[1,0],[-1,0],[0,1],[0,-1]];
+    while(head<q.length){var cur=q[head++],cx=cur%cols,cy=(cur/cols)|0;
+      if(cx===from[0]&&cy===from[1]){target=cur;break;}
+      for(var k=0;k<4;k++){var nx=cx+D[k][0],ny=cy+D[k][1];
+        if(nx<1||ny<1||nx>=cols-1||ny>=rows-1)continue;
+        var ni=ny*cols+nx;if(seen[ni])continue;seen[ni]=1;prev[ni]=cur;q.push(ni);}}
+    if(target<0)return;
+    for(var p=target;p!==-1;p=prev[p])g[p]=0;
+  }
+
+  function gen(){ state.grid=Core.genGrid(COLS,ROWS,state.terrain,state.seed);
+    Core.clearAround(state.grid,COLS,ROWS,state.start[0],state.start[1],1);
+    Core.clearAround(state.grid,COLS,ROWS,state.goal[0],state.goal[1],1);
+    state.grid[state.start[1]*COLS+state.start[0]]=0; state.grid[state.goal[1]*COLS+state.goal[0]]=0; }
+
+  function idx(x,y){return y*COLS+x;}
+  function inb(x,y){return x>=0&&y>=0&&x<COLS&&y<ROWS;}
+
+  /* 渲染 */
+  function draw(){
+    ctx.clearRect(0,0,cv.width,cv.height);
+    ctx.fillStyle='#fbfcff';ctx.fillRect(0,0,cv.width,cv.height);
+    // 网格线
+    ctx.strokeStyle='#eef2f9';ctx.lineWidth=1;
+    for(var x=0;x<=COLS;x++){ctx.beginPath();ctx.moveTo(x*CELL+.5,0);ctx.lineTo(x*CELL+.5,cv.height);ctx.stroke();}
+    for(var y=0;y<=ROWS;y++){ctx.beginPath();ctx.moveTo(0,y*CELL+.5);ctx.lineTo(cv.width,y*CELL+.5);ctx.stroke();}
+    // 障碍
+    ctx.fillStyle='#334155';
+    for(var yy=0;yy<ROWS;yy++)for(var xx=0;xx<COLS;xx++){if(state.grid[idx(xx,yy)]===1){ctx.fillRect(xx*CELL+1,yy*CELL+1,CELL-2,CELL-2);}}
+    // 已扩展 closed
+    ctx.fillStyle='#dbeafe';
+    state.visited.forEach(function(i){ctx.fillRect((i%COLS)*CELL+1,((i/COLS)|0)*CELL+1,CELL-2,CELL-2);});
+    // 待扩展 open
+    ctx.fillStyle='#fef3c7';
+    state.openSet.forEach(function(i){ctx.fillRect((i%COLS)*CELL+2,((i/COLS)|0)*CELL+2,CELL-4,CELL-4);});
+    // 路径
+    if(state.pathShow.length>1){
+      ctx.strokeStyle='#f59e0b';ctx.lineWidth=3.4;ctx.lineJoin='round';ctx.lineCap='round';ctx.beginPath();
+      state.pathShow.forEach(function(p,i){var cx=p[0]*CELL+CELL/2,cy=p[1]*CELL+CELL/2;if(i===0)ctx.moveTo(cx,cy);else ctx.lineTo(cx,cy);});
+      ctx.stroke();
+    }
+    // 起点 / 终点
+    dot(state.start[0],state.start[1],'#16a34a');
+    dot(state.goal[0],state.goal[1],'#2563eb');
+  }
+  function dot(x,y,color){ctx.beginPath();ctx.arc(x*CELL+CELL/2,y*CELL+CELL/2,CELL*0.34,0,Math.PI*2);ctx.fillStyle=color;ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=1.5;ctx.stroke();}
+
+  function clearDisplay(){state.result=null;state.visited=[];state.openSet=[];state.pathShow=[];stopTimer();draw();setStatus('就绪。');}
+  function stopTimer(){if(state.timer){clearTimeout(state.timer);state.timer=null;}}
+  function setStatus(html){$('status').innerHTML=html;}
+  function speedCount(){return [0,1,3,6,12,24][state.speed];}
+
+  /* 搜索动画 */
+  function runSearch(dyn){
+    stopTimer();
+    var args={grid:state.grid,cols:COLS,rows:ROWS,start:state.start,goal:state.goal,
+      algo:state.algo,heuristic:state.heur==='none'?'none':state.heur,weight:state.weight};
+    var r=Core.search(args);
+    state.result=r;state.visited=[];state.openSet=[];state.pathShow=[];
+    if(!r.found){setStatus('<b>未找到路径</b>：终点被障碍完全阻断，请调整地图。');draw();updateStats(r);return;}
+    var oi=0,pi=0,stepN=speedCount(),phase='expand';
+    setStatus('<b>'+algoName(state.algo)+'</b> 搜索中… 扩展节点逐步呈现。');
+    function tick(){
+      if(state.paused){state.timer=setTimeout(tick,60);return;}
+      if(phase==='expand'){
+        var target=Math.min(oi+stepN,r.order.length);
+        // open 集合 = 当前边界（用扩展点集合近似展示已探索前沿）
+        for(;oi<target;oi++){state.visited.push(r.order[oi]);}
+        state.openSet=r.order.slice(oi,Math.min(oi+stepN*3,r.order.length));
+        if(oi>=r.order.length){phase='path';}
+      }else if(phase==='path'){
+        pi=Math.min(pi+Math.max(1,Math.ceil(stepN/2)),r.path.length);
+        state.pathShow=r.path.slice(0,pi);state.openSet=[];
+        if(pi>=r.path.length){
+          setStatus('<b>'+algoName(state.algo)+'</b> 完成：路径 '+r.steps+' 步，扩展 '+r.expanded+' 个节点，耗时 '+r.ms.toFixed(2)+' ms。');
+          updateStats(r);draw();return;
+        }
+      }
+      // 动态障碍：扩展到 38% 时在路径前段插入障碍并触发重规划
+      if(dyn&&!state.dynActive&&phase==='expand'&&oi>r.order.length*0.38){
+        state.dynActive=true;
+        var p=r.path[Math.min(r.path.length-2,Math.floor(r.path.length*0.55))];
+        if(p&&!(p[0]===state.start[0]&&p[1]===state.start[1])&&!(p[0]===state.goal[0]&&p[1]===state.goal[1])){
+          state.grid[idx(p[0],p[1])]=1;
+          setStatus('<b>检测到动态障碍！</b>在路径上新增墙，正在重新规划…');
+          setTimeout(function(){state.dynActive=false;runSearchOnce(false,true);},450);
+          return;
+        }
+      }
+      updateStats(r,oi);
+      draw();
+      state.timer=setTimeout(tick,16);
+    }
+    tick();
+  }
+  function runSearchOnce(dyn,keepVisited){
+    stopTimer();
+    var args={grid:state.grid,cols:COLS,rows:ROWS,start:state.start,goal:state.goal,
+      algo:state.algo,heuristic:state.heur==='none'?'none':state.heur,weight:state.weight};
+    var r=Core.search(args);state.result=r;
+    if(!keepVisited){state.visited=[];state.openSet=[];state.pathShow=[];}
+    if(!r.found){setStatus('<b>重规划失败</b>：已无可行路径。');draw();updateStats(r);return;}
+    var oi=0,pi=0,stepN=speedCount(),phase='expand';
+    setStatus('<b>重规划中…</b> 新障碍已加入，重新搜索最优路径。');
+    function tick2(){
+      if(state.paused){state.timer=setTimeout(tick2,60);return;}
+      if(phase==='expand'){
+        var target=Math.min(oi+stepN,r.order.length);
+        for(;oi<target;oi++)state.visited.push(r.order[oi]);
+        state.openSet=r.order.slice(oi,Math.min(oi+stepN*3,r.order.length));
+        if(oi>=r.order.length)phase='path';
+      }else{
+        pi=Math.min(pi+Math.max(1,Math.ceil(stepN/2)),r.path.length);
+        state.pathShow=r.path.slice(0,pi);state.openSet=[];
+        if(pi>=r.path.length){setStatus('<b>重规划完成：</b>新路径 '+r.steps+' 步，扩展 '+r.expanded+' 个节点。');updateStats(r);draw();return;}
+      }
+      updateStats(r,oi);draw();state.timer=setTimeout(tick2,16);
+    }
+    tick2();
+  }
+  function algoName(a){return{astar:'A*',dijkstra:'Dijkstra',bfs:'BFS',greedy:'贪心最佳优先'}[a]||a;}
+  function updateStats(r,oi){
+    $('sExpand').textContent=(oi!=null?oi:(r?r.expanded:0));
+    $('sSteps').textContent=(r&&r.found)?r.steps:'—';
+    $('sCost').textContent=(r&&r.found)?(Math.round(r.cost*100)/100):'—';
+    $('sMs').innerHTML=(r?r.ms.toFixed(2):'0.00')+'<small> ms</small>';
+  }
+
+  /* 四算法对比 */
+  function runCompare(){
+    var algos=['astar','dijkstra','bfs','greedy'],heurs={astar:'manhattan',dijkstra:'none',bfs:'none',greedy:'manhattan'};
+    var base={grid:state.grid,cols:COLS,rows:ROWS,start:state.start,goal:state.goal,weight:state.weight};
+    var rs=algos.map(function(a){return Core.search(Object.assign({},base,{algo:a,heuristic:heurs[a]}));});
+    var bestSteps=Infinity;rs.forEach(function(r){if(r.found&&r.steps<bestSteps)bestSteps=r.steps;});
+    var label={astar:'A*',dijkstra:'Dijkstra',bfs:'BFS',greedy:'贪心最佳优先'};
+    var hlabel={astar:'曼哈顿',dijkstra:'无',bfs:'无',greedy:'曼哈顿'};
+    var html='';
+    algos.forEach(function(a,i){
+      var r=rs[i];
+      var optimal=r.found&&r.steps===bestSteps?'<span class="tag g">最优</span>':(r.found?'<span class="tag">次优</span>':'—');
+      html+='<tr><td><b>'+label[a]+'</b></td><td>'+hlabel[a]+'</td><td>'+(r.found?'是':'否')+
+        '</td><td class="'+(r.found&&r.steps===bestSteps?'best':'')+'">'+(r.found?r.steps:'—')+
+        '</td><td>'+r.expanded+'</td><td>'+r.ms.toFixed(2)+'</td><td>'+optimal+'</td></tr>';
+    });
+    $('cmpTable').querySelector('tbody').innerHTML=html;
+    $('cmpBtn').textContent='重新运行对比';
+    setStatus('四算法对比已生成（同一地图，同一起终点）。');
+  }
+
+  /* 控件绑定 */
+  function bindSeg(id,key,cb){
+    var seg=$(id);
+    seg.addEventListener('click',function(e){
+      var b=e.target.closest('button');if(!b)return;
+      Array.prototype.forEach.call(seg.querySelectorAll('button'),function(x){x.classList.remove('on');});
+      b.classList.add('on');state[key]=b.dataset.v;if(cb)cb(b.dataset.v);
+    });
+  }
+  bindSeg('algoSeg','algo',function(){clearDisplay();});
+  bindSeg('heurSeg','heur',function(v){state.heur=v;clearDisplay();});
+  bindSeg('terrainSeg','terrain',function(){state.seed++;gen();clearDisplay();});
+  bindSeg('editSeg','edit',function(){});
+  $('speed').addEventListener('input',function(){state.speed=+this.value;$('speedVal').textContent=['','极慢','慢','中','快','极快'][state.speed];});
+  $('runBtn').addEventListener('click',function(){runSearch(false);});
+  $('pauseBtn').addEventListener('click',function(){state.paused=!state.paused;});
+  $('resetBtn').addEventListener('click',function(){clearDisplay();});
+  $('regenBtn').addEventListener('click',function(){state.seed++;gen();clearDisplay();});
+  $('dynBtn').addEventListener('click',function(){gen();clearDisplay();setTimeout(function(){runSearch(true);},120);});
+  $('cmpBtn').addEventListener('click',runCompare);
+  document.addEventListener('keydown',function(e){
+    if(e.key==='r'||e.key==='R')clearDisplay();
+    if(e.code==='Space'){e.preventDefault();state.paused=!state.paused;}
+  });
+
+  /* 画布编辑（含拖拽、右键擦除） */
+  var drawing=false,eraseMode=false;
+  function canvasPos(e){var r=cv.getBoundingClientRect();return{x:Math.floor((e.clientX-r.left)/r.width*COLS),y:Math.floor((e.clientY-r.top)/r.height*ROWS)};}
+  function paint(e){
+    var p=canvasPos(e);if(!inb(p.x,p.y))return;
+    var mode=eraseMode?'erase':state.edit;
+    if(mode==='start'){ if(!(p.x===state.goal[0]&&p.y===state.goal[1])&&state.grid[idx(p.x,p.y)]!==1){state.start=[p.x,p.y];} }
+    else if(mode==='goal'){ if(!(p.x===state.start[0]&&p.y===state.start[1])&&state.grid[idx(p.x,p.y)]!==1){state.goal=[p.x,p.y];} }
+    else if(mode==='wall'){ if(!(p.x===state.start[0]&&p.y===state.start[1])&&!(p.x===state.goal[0]&&p.y===state.goal[1]))state.grid[idx(p.x,p.y)]=1; }
+    else if(mode==='erase'){ state.grid[idx(p.x,p.y)]=0; }
+    clearDisplay();
+  }
+  cv.addEventListener('mousedown',function(e){drawing=true;eraseMode=(e.button===2);paint(e);});
+  window.addEventListener('mouseup',function(){drawing=false;eraseMode=false;});
+  cv.addEventListener('mousemove',function(e){if(drawing)paint(e);});
+  cv.addEventListener('contextmenu',function(e){e.preventDefault();});
+
+  gen();draw();
+})();
+</script>
+</body>
+</html>
